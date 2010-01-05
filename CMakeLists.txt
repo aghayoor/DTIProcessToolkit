@@ -24,15 +24,14 @@ INCLUDE(${ITK_USE_FILE})
 FIND_PACKAGE( VTK REQUIRED )
 INCLUDE(${VTK_USE_FILE})
 
-IF( NOT BUILD_AGAINST_SLICER3 )
-    ##  In many cases sub-projects depending on SlicerExectuion Model
-    ##  that can be built stand alone are combined in larger packages
-    ##  This logic will include SlicerExectionModel only if it
-    ##  has not already been built.
-    #    IF( NOT GenerateCLP_DIR )
+##  In many cases sub-projects depending on SlicerExectuion Model
+##  that can be built stand alone are combined in larger packages
+##  This logic will include SlicerExectionModel only if it
+##  has not already been built.
+FIND_PACKAGE(GenerateCLP NO_MODULE QUIET)
+IF( NOT GenerateCLP_DIR )
       ADD_SUBDIRECTORY(SlicerExecutionModel)
-    #    ENDIF( NOT GenerateCLP_DIR )
-ENDIF( NOT BUILD_AGAINST_SLICER3 )
+ENDIF( NOT GenerateCLP_DIR )
 FIND_PACKAGE(GenerateCLP NO_MODULE REQUIRED)
 IF(GenerateCLP_DIR)
   INCLUDE(${GenerateCLP_USE_FILE})
