@@ -1,16 +1,33 @@
 PROJECT(DTIProcess)
 
-NeuroLib_USE_ITK()
-NeuroLib_USE_VTK()
-NeuroLiB_USE_BOOST()
-
 INCLUDE_DIRECTORIES(
 ${DTIProcess_SOURCE_DIR}/Library
 ${DTIProcess_SOURCE_DIR}/PrivateLibrary
+${DTIProcess_SOURCE_DIR}
 )
 
+IF(0)
+IF(CMAKE_SYSTEM MATCHES "Linux*")
+  EXEC_PROGRAM(gcc ARGS --version OUTPUT_VARIABLE CMAKE_C_COMPILER_VERSION)
+  IF(CMAKE_C_COMPILER_VERSION MATCHES ".*4\\.[0-9]\\.[0-9].*")
+    SET(GCC_FORTRAN_LIBRARY gfortran)
+  ELSE(CMAKE_C_COMPILER_VERSION MATCHES ".*4\\.[0-9]\\.[0-9].*")
+    SET(GCC_FORTRAN_LIBRARY g2c)
+  ENDIF(CMAKE_C_COMPILER_VERSION MATCHES ".*4\\.[0-9]\\.[0-9].*") 
+ELSEIF(CMAKE_SYSTEM MATCHES "Darwin*")
+     SET(GCC_FORTRAN_LIBRARY gfortran)
+ELSE(CMAKE_SYSTEM MATCHES "Linux*")
+  ERROR("Don't know how to support fortran on non-linux/mac")
+ENDIF(CMAKE_SYSTEM MATCHES "Linux*")
+
 # Workaround problems with cmake and fortran
-ADD_SUBDIRECTORY(bessel)
+#SET(BESSEL_LIB bessel ${GCC_FORTRAN_LIBRARY} )
+#ADD_SUBDIRECTORY(bessel)
+ELSE(0)
+## Replace bessel(FORTRAN) with cephes(C)
+SET(BESSEL_LIB cephes)
+ADD_SUBDIRECTORY(cephes)
+ENDIF(0)
 
 ADD_SUBDIRECTORY(Library)
 ADD_SUBDIRECTORY(PrivateLibrary)
