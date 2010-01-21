@@ -2,8 +2,8 @@
 
   Program:   NeuroLib (DTI command line tools)
   Language:  C++
-  Date:      $Date: 2009-12-14 12:29:41 $
-  Version:   $Revision: 1.8 $
+  Date:      $Date$
+  Version:   $Revision$
   Author:    Casey Goodlett (gcasey@sci.utah.edu)
 
   Copyright (c)  Casey Goodlett. All rights reserved.
@@ -28,6 +28,7 @@
 
 // IO
 #include <itkImageFileReader.h>
+#include <itkImageFileWriter.h>
 
 // dtiprocess headers
 #include "itkVectorMaskImageFilter.h"
@@ -113,8 +114,8 @@ int main(int argc, char* argv[])
     // General options
     ("help,h", "produce this help message")
     ("verbose,v","produces verbose output")
-    ("mask", po::value<std::string>(), "Masks tensors")
-
+    ("mask", po::value<std::string>(), "Masks tensors (specify --outmask if you want to save the masked tensor field)")
+    ("outmask",po::value<std::string>(),"Name of the masked tensor field")
     // Derived outputs
     ("fa-output,f", po::value<std::string>(), "FA output file")
     ("md-output,m", po::value<std::string>(), "MD output file")
@@ -138,13 +139,15 @@ int main(int argc, char* argv[])
 
     // tensor transformations
     // affine
-    ("rot-output,r", po::value<std::string>(),"Rotated tensor output file.  Must also specify the dof file.")
-    ("dof-file,d", po::value<std::string>(),"Transformation file for affine transformation. This must be RView text format (not binary!).") //This can be RView or ITK format.")
+    ("rot-output,r", po::value<std::string>(),"Rotated tensor output file.  Must also specify the dof file (-d or -t).")
+    ("dof-file,d", po::value<std::string>(),"Transformation file for affine transformation.  RView old format .")
+    ("newdof-file,D", po::value<std::string>(),"Transformation file for affine transformation.  RView NEW format. (txt file output of dof2mat)")
+    ("affineitk-file,t", po::value<std::string>(),"Transformation file for affine transformation.  ITK format.")
 
     // deformation
     ("deformation-output,w", po::value<std::string>(), "Warped tensor field based on a deformation field.  This option requires the --forward,-F transformation to be specified.")
     ("forward,F", po::value<std::string>(), "Forward transformation.  Assumed to be a deformation field in world coordinates, unless the --h-field option is specified.")
-    //("inverse,I", po::value<std::string>(), "Inverse of warp (DEPRECATED: NO LONGER REQUIRED)")
+    ("inverse,I", po::value<std::string>(), "Inverse of warp (DEPRECATED: NO LONGER REQUIRED)")
     ("h-field", "forward and inverse transformations are h-fields instead of displacement fields")
 
     // transformation options
@@ -188,7 +191,7 @@ int main(int argc, char* argv[])
     std::cout << config << std::endl;
     if(vm.count("help"))
     {
-      std::cout << "$Date: 2009-12-14 12:29:41 $ $Revision: 1.8 $" << std::endl;
+      std::cout << "$Date$ $Revision$" << std::endl;
       std::cout << ITK_SOURCE_VERSION << std::endl;
       return EXIT_SUCCESS;
     }
@@ -302,9 +305,25 @@ int main(int argc, char* argv[])
     }
 
     tensors = mask->GetOutput();
-  }
 
-  double sigma = vm["sigma"].as<double>();
+    //If the outmask option is specified, the masked tensor field is saved 
+    if(vm.count("outmask"))
+    {
+      typedef itk::ImageFileWriter<TensorImageType> FileWriterType;
+      FileWriterType::Pointer dtiwriter = FileWriterType::New();
+      dtiwriter->SetFileName(vm["outmask"].as<std::string>().c_str());
+      dtiwriter->SetInput(tensors);
+      try
+      {
+	dtiwriter->Update();
+      }
+      catch (itk::ExceptionObject & e)
+      {
+	std::cerr << e <<std::endl;
+	return EXIT_FAILURE;
+      }       
+    }
+  }
 
   // Compute FA image
   if(vm.count("fa-output"))
@@ -320,12 +339,16 @@ int main(int argc, char* argv[])
 
   if(vm.count("fa-gradient-output"))
   {
+    double sigma = vm["sigma"].as<double>();
+  
     writeImage(vm["fa-gradient-output"].as<std::string>(), 
                createFAGradient(tensors, sigma));
   }
 
   if(vm.count("fa-gradmag-output"))
   {
+    double sigma = vm["sigma"].as<double>();
+
     writeImage(vm["fa-gradmag-output"].as<std::string>(), 
                createFAGradMag(tensors, sigma));
   }
@@ -399,16 +422,38 @@ int main(int argc, char* argv[])
                createNegativeEigenValueLabel(tensors));
   }
 
+
   if(vm.count("rot-output"))
   {
-    if(!vm.count("dof-file"))
+    if(!vm.count("dof-file") && !vm.count("affineitk-file") && !vm.count("newdof-file"))
     {
       std::cerr << "Tensor rotation requested, but dof file not specified" << std::endl;
       return EXIT_FAILURE;
     }
-    writeImage(vm["rot-output"].as<std::string>(),
-               createROT(tensors,
-                         vm["dof-file"].as<std::string>()));
+    //If the input affine file is a dof file from rview
+    else if(vm.count("dof-file"))
+    {
+      writeImage(vm["rot-output"].as<std::string>(),
+		 createROT(tensors,
+			   vm["dof-file"].as<std::string>(),
+			   0));
+    }
+    //If the input affine file is a new dof file (output of dof2mat)
+    else if(vm.count("newdof-file"))
+    {
+      writeImage(vm["rot-output"].as<std::string>(),
+		 createROT(tensors,
+			   vm["newdof-file"].as<std::string>(),
+			   1));
+    } 
+    //If the input affine file is an itk compatible file   
+    else if(vm.count("affineitk-file"))
+    {
+      writeImage(vm["rot-output"].as<std::string>(),
+		 createROT(tensors,
+			   vm["affineitk-file"].as<std::string>(),
+			   2));
+    }
   }
    
 
