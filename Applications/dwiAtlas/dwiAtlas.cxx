@@ -56,7 +56,7 @@
 #include <itkBinaryThresholdImageFilter.h>
 
 #include <itkNthElementImageAdaptor.h>
-#include <itkOtsuThresholdImageCalculator.h>
+
 
 #include "itkVectorMaskNegatedImageFilter.h"
 #include "itkVectorMaskImageFilter.h"

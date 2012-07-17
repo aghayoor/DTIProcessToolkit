@@ -72,7 +72,7 @@ int ScalarDeformationApplyTest(int argc, char* argv[])
   warp->SetInput(image);
   warp->SetOutputSpacing(image->GetSpacing());
   warp->SetOutputOrigin(image->GetOrigin());
-  warp->SetDeformationField(defgen->GetOutput());
+  warp->SetDisplacementField(defgen->GetOutput());
   warp->Update();
 
   writer->SetInput(warp->GetOutput());

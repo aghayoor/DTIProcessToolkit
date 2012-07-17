@@ -209,7 +209,7 @@ int main(int argc, char* argv[])
     warpresampler->SetInterpolator(interp);
     warpresampler->SetEdgePaddingValue(0);
     warpresampler->SetInput(reader->GetOutput());
-    warpresampler->SetDeformationField(defimage);
+    warpresampler->SetDisplacementField(defimage);
     warpresampler->SetOutputSpacing( reader->GetOutput()->GetSpacing());
     warpresampler->SetOutputOrigin( reader->GetOutput()->GetOrigin());
     warpresampler->Update();

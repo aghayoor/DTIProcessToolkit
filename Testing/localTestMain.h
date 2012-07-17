@@ -37,7 +37,9 @@
 #include "itkSubtractImageFilter.h"
 #include "itkRescaleIntensityImageFilter.h"
 #include "itkExtractImageFilter.h"
-#include "itkDifferenceImageFilter.h"
+//#include "itkDifferenceImageFilter.h"
+#include <itkTestingComparisonImageFilter.h>
+
 #include "itkImageRegion.h"
 #include "itksys/SystemTools.hxx"
 
@@ -285,7 +287,8 @@ int RegressionTestImage (const char *testImageFilename,
     }
 
   // Now compare the two images
-  typedef itk::DifferenceImageFilter<ImageType,ImageType> DiffType;
+//  typedef itk::DifferenceImageFilter<ImageType,ImageType> DiffType;
+  typedef itk::Testing::ComparisonImageFilter<ImageType,ImageType> DiffType;
   DiffType::Pointer diff = DiffType::New();
     diff->SetValidInput(baselineReader->GetOutput());
     diff->SetTestInput(testReader->GetOutput());
@@ -456,4 +459,4 @@ std::map<std::string,int> RegressionTestBaselines (char *baselineFilename)
 }
 
 // Needed for explicit instantiation
-#include "itkDifferenceImageFilter.h"
+//#include "itkDifferenceImageFilter.h"

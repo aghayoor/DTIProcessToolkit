@@ -44,7 +44,8 @@
 #include <itkImageRegionIterator.h>
 
 #include <itkNthElementImageAdaptor.h>
-#include <itkOtsuThresholdImageCalculator.h>
+#include <itkOtsuThresholdCalculator.h>
+#include <itkImageToHistogramFilter.h>
 
 #include "itkVectorMaskNegatedImageFilter.h"
 #include "itkVectorMaskImageFilter.h"
@@ -553,12 +554,17 @@ int main(int argc, char* argv[])
   }
   else
   {
-    typedef itk::OtsuThresholdImageCalculator<RealImageType> 
+    typedef itk::Statistics::ImageToHistogramFilter<RealImageType> ImageToHistogramType ;
+    ImageToHistogramType::Pointer imageToHistogram = ImageToHistogramType::New() ;
+    imageToHistogram->SetInput( B0Image ) ;
+    imageToHistogram->Update() ;
+
+    typedef itk::OtsuThresholdCalculator< ImageToHistogramType::HistogramType , ScalarPixelType >
       OtsuThresholdCalculatorType;
 
     OtsuThresholdCalculatorType::Pointer  otsucalculator = OtsuThresholdCalculatorType::New();
-    otsucalculator->SetImage(B0Image);
-    otsucalculator->Compute();
+    otsucalculator->SetInput( imageToHistogram->GetOutput() ) ;
+    otsucalculator->Update();
     _threshold = static_cast<ScalarPixelType>(.9 * otsucalculator->GetThreshold());
 
     if(VERBOSE)
