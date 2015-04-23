@@ -11,6 +11,7 @@
 #include "itkFastSymmetricEigenAnalysisImageFilter.h"
 #include "itkVectorIndexSelectionCastImageFilter.h"
 #include <itkAddImageFilter.h>
+#include <itkTernaryAddImageFilter.h>
 
 #if ITK_VERSION_MAJOR < 4
 #include <itkMultiplyByConstantImageFilter.h>
@@ -20,7 +21,6 @@
 
 // My ITK Filters
 #include "itkVectorMaskNegatedImageFilter.h"
-#include "itkTensorMeanDiffusivityImageFilter.h"
 #include "itkTensorFrobeniusNormImageFilter.h"
 #include "itkTensorColorFAImageFilter.h"
 #include "itkTensorNegativeEigenValueImageFilter.h"
@@ -61,12 +61,47 @@ itk::Image<unsigned short, 3>::Pointer createFA<unsigned short>(TensorImageType:
 template <>
 itk::Image<double, 3>::Pointer createMD<double>(TensorImageType::Pointer timg) // Tensor image
 {
-  typedef itk::TensorMeanDiffusivityImageFilter<TensorImageType, RealImageType> MDFilterType;
+  typedef itk::FastSymmetricEigenAnalysisImageFilter<TensorImageType, DeformationImageType> LambdaFilterType;
+  LambdaFilterType::Pointer lambdafilter = LambdaFilterType::New();
+  lambdafilter->SetInput(timg);
+  lambdafilter->Update();
+
+  typedef itk::TernaryAddImageFilter<RealImageType, RealImageType, RealImageType, RealImageType> MDFilterType;
   MDFilterType::Pointer mdfilter = MDFilterType::New();
-  mdfilter->SetInput(timg);
+
+  typedef itk::VectorIndexSelectionCastImageFilter<LambdaFilterType::OutputImageType,
+                                                   RealImageType> ElementSelectAdaptorType;
+  ElementSelectAdaptorType::Pointer elementSelect1 = ElementSelectAdaptorType::New();
+  elementSelect1->SetInput(lambdafilter->GetOutput() );
+  // lambda3
+  elementSelect1->SetIndex(0);
+  elementSelect1->Update();
+  mdfilter->SetInput1(elementSelect1->GetOutput() );
+
+  ElementSelectAdaptorType::Pointer elementSelect2 = ElementSelectAdaptorType::New();
+  elementSelect2->SetInput(lambdafilter->GetOutput() );
+  // lambda2
+  elementSelect2->SetIndex(1);
+  elementSelect2->Update();
+  mdfilter->SetInput2(elementSelect2->GetOutput() );
+
+  ElementSelectAdaptorType::Pointer elementSelect3 = ElementSelectAdaptorType::New();
+  elementSelect3->SetInput(lambdafilter->GetOutput() );
+  // lambda1
+  elementSelect3->SetIndex(2);
+  elementSelect3->Update();
+  mdfilter->SetInput3(elementSelect3->GetOutput() );
+
   mdfilter->Update();
 
-  return mdfilter->GetOutput();
+  typedef itk::MultiplyImageFilter<MDFilterType::OutputImageType,
+    MDFilterType::OutputImageType, RealImageType> DivideFilterType;
+  DivideFilterType::Pointer dividefilter = DivideFilterType::New();
+  dividefilter->SetInput(mdfilter->GetOutput() );
+  dividefilter->SetConstant(1.0/3.0);
+  dividefilter->Update();
+
+  return dividefilter->GetOutput();
 }
 
 template <>
@@ -92,7 +127,6 @@ itk::Image<double, 3>::Pointer createLambda<double>(TensorImageType::Pointer tim
   typedef itk::FastSymmetricEigenAnalysisImageFilter<TensorImageType, DeformationImageType> LambdaFilterType;
   LambdaFilterType::Pointer lambdafilter = LambdaFilterType::New();
   lambdafilter->SetInput(timg);
-  lambdafilter->OrderEigenValuesBy(LambdaFilterType::FunctorType::OrderByValue);
   lambdafilter->Update();
 
   typedef itk::VectorIndexSelectionCastImageFilter<LambdaFilterType::OutputImageType,
@@ -130,7 +164,6 @@ itk::Image<double, 3>::Pointer createRD<double>(TensorImageType::Pointer timg) /
   typedef itk::FastSymmetricEigenAnalysisImageFilter<TensorImageType, DeformationImageType> LambdaFilterType;
   LambdaFilterType::Pointer lambdafilter = LambdaFilterType::New();
   lambdafilter->SetInput(timg);
-  lambdafilter->OrderEigenValuesBy(LambdaFilterType::FunctorType::OrderByValue);
   lambdafilter->Update();
 
   typedef itk::AddImageFilter<RealImageType, RealImageType, RealImageType> RDFilterType;
